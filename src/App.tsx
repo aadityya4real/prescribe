@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { PortalRoute } from './components/layout/PortalRoute'
 import { LoginPage } from './pages/LoginPage'
+import { PatientDashboard } from './pages/PatientDashboard'
+import { PatientTimeline } from './pages/PatientTimeline'
 import { PortalPlaceholder } from './pages/PortalPlaceholder'
 import { SignupPage } from './pages/SignupPage'
 
@@ -11,8 +13,8 @@ export function App() {
     <Route path="/signup/doctor" element={<SignupPage role="doctor" />} />
 
     <Route path="/patient" element={<PortalRoute role="patient" />}>
-      <Route path="dashboard" element={<PortalPlaceholder title="Your health overview" />} />
-      <Route path="timeline" element={<PortalPlaceholder title="Health timeline" />} />
+      <Route path="dashboard" element={<PatientDashboard />} />
+      <Route path="timeline" element={<PatientTimeline />} />
       <Route path="care-team" element={<PortalPlaceholder title="Care team" />} />
       <Route path="appointments" element={<PortalPlaceholder title="Appointments" />} />
       <Route path="treatments" element={<PortalPlaceholder title="Treatments" />} />
