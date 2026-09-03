@@ -1,5 +1,6 @@
 import { Apple, ArrowRight, Eye, EyeOff, KeyRound, Mail, ShieldCheck } from 'lucide-react'
 import { FormEvent, useState } from 'react'
+import { Link } from 'react-router-dom'
 import type { Role } from './RoleSelector'
 
 const copy = { patient: { label: 'Patient portal', title: 'Welcome back', description: 'Continue your health journey with confidence.' }, doctor: { label: 'Doctor portal', title: 'Welcome back', description: 'Access your secure clinical workspace.' } }
@@ -19,7 +20,7 @@ export function LoginForm({ role }: { role: Role }) {
     </form>
     <div className="divider"><span>or continue with</span></div>
     <div className="socials"><button type="button" className="social-button"><span className="google">G</span>Google</button><button type="button" className="social-button"><Apple size={18} />Apple</button></div>
-    <p className="signup-copy">New to PreScribe? <a href={`/signup/${role}`}>Create {role === 'patient' ? 'patient' : 'doctor'} account</a></p>
+    <p className="signup-copy">New to PreScribe? <Link to={`/signup/${role}`}>Create {role === 'patient' ? 'patient' : 'doctor'} account</Link></p>
     <p className="privacy-note"><ShieldCheck size={15} /> Your information is protected and private.</p>
   </section>
 }
