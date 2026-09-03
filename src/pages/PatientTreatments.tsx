@@ -1,0 +1,30 @@
+import { Activity, Check, ChevronDown, ChevronUp, CircleCheck, ClipboardCheck, Info, Pill, Stethoscope } from 'lucide-react'
+import { useState } from 'react'
+import { activeTreatments, currentMedications, pastTreatments, todaysCareItems } from '../features/patient-treatments/treatmentData'
+import type { Medication, Treatment, TreatmentStatus } from '../features/patient-treatments/types'
+
+export function PatientTreatments() {
+  const [expandedItem, setExpandedItem] = useState<string | null>(null)
+  const [completedCare, setCompletedCare] = useState<string[]>([])
+  const [treatmentView, setTreatmentView] = useState<'active' | 'past'>('active')
+  const treatments = treatmentView === 'active' ? activeTreatments : pastTreatments
+  const toggleCare = (id: string) => setCompletedCare((items) => items.includes(id) ? items.filter((item) => item !== id) : [...items, id])
+
+  return <div className="treatments-page">
+    <header className="treatments-header"><div><p className="dashboard-date">Your treatment plan</p><h2>Treatments</h2><p>Keep track of your current medications and ongoing care.</p></div><div className="active-treatment-count"><Activity size={18} /><span><b>{activeTreatments.length}</b> active treatments</span></div></header>
+
+    <div className="treatments-layout"><section className="treatments-section medications-section" aria-labelledby="medications-heading"><div className="section-heading"><div><p className="section-kicker">Current medication</p><h3 id="medications-heading">Medications</h3></div></div><div className="medication-list">{currentMedications.map((medication) => <MedicationCard key={medication.id} medication={medication} expanded={expandedItem === medication.id} onToggle={() => setExpandedItem(expandedItem === medication.id ? null : medication.id)} />)}</div></section>
+
+      <aside className="today-care-panel" aria-labelledby="today-care-heading"><div><p className="section-kicker">Scheduled for today</p><h3 id="today-care-heading">Today’s care</h3><p>Use this as a simple reminder of care items in your available plan.</p></div><div className="care-checklist">{todaysCareItems.map((item) => { const done = completedCare.includes(item.id); return <button type="button" className={done ? 'care-check-item completed' : 'care-check-item'} onClick={() => toggleCare(item.id)} aria-pressed={done} key={item.id}><span>{done && <Check size={14} />}</span><div><b>{item.title}</b><small>{item.detail} <em>·</em> {item.timeLabel}</small></div></button> })}</div></aside></div>
+
+    <section className="treatments-section treatment-plan-section" aria-labelledby="treatment-plan-heading"><div className="section-heading"><div><p className="section-kicker">Care beyond medication</p><h3 id="treatment-plan-heading">Treatment plans</h3></div><div className="treatment-view-switch" role="tablist" aria-label="Treatment history"><button role="tab" aria-selected={treatmentView === 'active'} className={treatmentView === 'active' ? 'active' : ''} onClick={() => setTreatmentView('active')}>Active</button><button role="tab" aria-selected={treatmentView === 'past'} className={treatmentView === 'past' ? 'active' : ''} onClick={() => setTreatmentView('past')}>Past</button></div></div><div className="treatment-plan-list">{treatments.map((treatment) => <TreatmentCard key={treatment.id} treatment={treatment} expanded={expandedItem === treatment.id} onToggle={() => setExpandedItem(expandedItem === treatment.id ? null : treatment.id)} />)}</div></section>
+
+    <section className="treatment-information"><span><Info size={20} /></span><div><h3>Treatment information</h3><p>Your treatment information is based on the records available in your PreScribe profile. Contact your healthcare professional for changes to your prescribed care.</p></div></section>
+  </div>
+}
+
+function MedicationCard({ medication, expanded, onToggle }: { medication: Medication; expanded: boolean; onToggle: () => void }) { return <article className={expanded ? 'medication-card expanded' : 'medication-card'}><button type="button" className="medication-card-main" onClick={onToggle} aria-expanded={expanded}><span className="medication-icon"><Pill size={19} /></span><span className="medication-copy"><span className="medication-title"><b>{medication.name}</b><StatusBadge status={medication.status} /></span><small>{medication.dosage} <em>·</em> {medication.frequency} <em>·</em> {medication.timing}</small><i>{medication.purpose}</i></span>{expanded ? <ChevronUp className="treatment-chevron" size={17} /> : <ChevronDown className="treatment-chevron" size={17} />}</button>{expanded && <div className="treatment-detail-row"><dl><div><dt>Prescribing provider</dt><dd>{medication.prescribingProvider ?? 'Not listed'}</dd></div><div><dt>Start date</dt><dd>{medication.startDate}</dd></div><div><dt>Record note</dt><dd>{medication.notes}</dd></div></dl></div>}</article> }
+
+function TreatmentCard({ treatment, expanded, onToggle }: { treatment: Treatment; expanded: boolean; onToggle: () => void }) { return <article className={expanded ? 'treatment-plan-card expanded' : 'treatment-plan-card'}><button type="button" className="treatment-plan-main" onClick={onToggle} aria-expanded={expanded}><span className="treatment-plan-icon"><Stethoscope size={18} /></span><span className="treatment-plan-copy"><span><b>{treatment.name}</b><StatusBadge status={treatment.status} /></span><small>{treatment.context} <em>·</em> {treatment.schedule}</small><i>{treatment.dateRange}</i></span>{expanded ? <ChevronUp className="treatment-chevron" size={17} /> : <ChevronDown className="treatment-chevron" size={17} />}</button>{expanded && <div className="treatment-detail-row"><dl><div><dt>Care provider</dt><dd>{treatment.provider ?? 'Not listed'}</dd></div><div><dt>Schedule</dt><dd>{treatment.schedule}</dd></div><div><dt>Record note</dt><dd>{treatment.notes}</dd></div></dl></div>}</article> }
+
+function StatusBadge({ status }: { status: TreatmentStatus }) { return <span className={`treatment-badge ${status.toLowerCase()}`}>{status === 'Active' && <CircleCheck size={13} />}{status}</span> }
