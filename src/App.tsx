@@ -3,6 +3,7 @@ import { PortalRoute } from './components/layout/PortalRoute'
 import { LoginPage } from './pages/LoginPage'
 import { PatientDashboard } from './pages/PatientDashboard'
 import { PatientCareTeam } from './pages/PatientCareTeam'
+import { PatientAppointments } from './pages/PatientAppointments'
 import { PatientTimeline } from './pages/PatientTimeline'
 import { PortalPlaceholder } from './pages/PortalPlaceholder'
 import { SignupPage } from './pages/SignupPage'
@@ -17,7 +18,7 @@ export function App() {
       <Route path="dashboard" element={<PatientDashboard />} />
       <Route path="timeline" element={<PatientTimeline />} />
       <Route path="care-team" element={<PatientCareTeam />} />
-      <Route path="appointments" element={<PortalPlaceholder title="Appointments" />} />
+      <Route path="appointments" element={<PatientAppointments />} />
       <Route path="treatments" element={<PortalPlaceholder title="Treatments" />} />
     </Route>
 
