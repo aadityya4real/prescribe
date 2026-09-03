@@ -9,6 +9,7 @@
     "lint": "tsc -b --noEmit"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.115.0",
     "@vitejs/plugin-react": "latest",
     "lucide-react": "latest",
     "react": "latest",
