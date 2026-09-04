@@ -6,6 +6,9 @@ import { PatientCareTeam } from './pages/PatientCareTeam'
 import { PatientAppointments } from './pages/PatientAppointments'
 import { PatientTreatments } from './pages/PatientTreatments'
 import { PatientTimeline } from './pages/PatientTimeline'
+import { DoctorDashboard } from './pages/DoctorDashboard'
+import { DoctorPatientOverview } from './pages/DoctorPatientOverview'
+import { DoctorPatients } from './pages/DoctorPatients'
 import { PortalPlaceholder } from './pages/PortalPlaceholder'
 import { SignupPage } from './pages/SignupPage'
 
@@ -24,8 +27,9 @@ export function App() {
     </Route>
 
     <Route path="/doctor" element={<PortalRoute role="doctor" />}>
-      <Route path="dashboard" element={<PortalPlaceholder title="Clinical overview" />} />
-      <Route path="patients" element={<PortalPlaceholder title="Patients" />} />
+      <Route path="dashboard" element={<DoctorDashboard />} />
+      <Route path="patients" element={<DoctorPatients />} />
+      <Route path="patients/:connectionId" element={<DoctorPatientOverview />} />
       <Route path="schedule" element={<PortalPlaceholder title="Schedule" />} />
     </Route>
 
