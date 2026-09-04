@@ -10,90 +10,36 @@ type AuthContextValue = { user: User | null; session: Session | null; profile: P
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-function userMetadataRole(user: User | null): Role | null {
-  const value = user?.user_metadata.role
-  return value === 'patient' || value === 'doctor' ? value : null
-}
-
-function profileFromRecord(record: unknown): Profile | null {
-  if (!record || typeof record !== 'object') return null
-  const candidate = record as Record<string, unknown>
-  if (typeof candidate.id !== 'string' || typeof candidate.email !== 'string' || (candidate.role !== 'patient' && candidate.role !== 'doctor') || typeof candidate.full_name !== 'string' || typeof candidate.created_at !== 'string') return null
-  return { id: candidate.id, email: candidate.email, role: candidate.role, full_name: candidate.full_name, prescribe_id: typeof candidate.prescribe_id === 'string' ? candidate.prescribe_id : null, created_at: candidate.created_at }
-}
+function metadataRole(user: User): Role | null { const role = user.user_metadata.role; return role === 'patient' || role === 'doctor' ? role : null }
+function generatePreScribeId(role: Role) { const bytes = crypto.getRandomValues(new Uint8Array(4)); const suffix = Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('').toUpperCase(); return `${role === 'patient' ? 'PAT' : 'DOC'}-${suffix}` }
+function profileFromRecord(record: unknown): Profile | null { if (!record || typeof record !== 'object') return null; const value = record as Record<string, unknown>; if (typeof value.id !== 'string' || typeof value.email !== 'string' || (value.role !== 'patient' && value.role !== 'doctor') || typeof value.full_name !== 'string' || typeof value.created_at !== 'string') return null; return { id: value.id, email: value.email, role: value.role, full_name: value.full_name, prescribe_id: typeof value.prescribe_id === 'string' ? value.prescribe_id : null, created_at: value.created_at } }
+function profileInput(user: User) { const role = metadataRole(user); const fullName = typeof user.user_metadata.full_name === 'string' ? user.user_metadata.full_name.trim() : ''; const prescribeId = typeof user.user_metadata.prescribe_id === 'string' ? user.user_metadata.prescribe_id : undefined; if (!role || !fullName || !user.email) return { error: 'Your account is missing the profile information required to open a portal.' } as const; return { value: { id: user.id, email: user.email, role, full_name: fullName, prescribe_id: prescribeId ?? generatePreScribeId(role) } } as const }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  const refreshProfile = useCallback(async () => {
-    if (!supabase || !user) { setProfile(null); return }
-    const { data } = await supabase.from('profiles').select('id, email, role, full_name, prescribe_id, created_at').eq('id', user.id).maybeSingle()
-    setProfile(profileFromRecord(data))
-  }, [user])
-
-  useEffect(() => {
-    if (!supabase) { setLoading(false); return }
-    const client = supabase
-    let active = true
-    const initialize = async () => {
-      const { data } = await client.auth.getSession()
-      if (!active) return
-      setSession(data.session)
-      setUser(data.session?.user ?? null)
-      if (data.session?.user) await refreshProfile()
-      if (active) setLoading(false)
-    }
-    void initialize()
-    const { data: listener } = client.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession)
-      setUser(nextSession?.user ?? null)
-      setProfile(null)
-      setLoading(false)
-    })
-    return () => { active = false; listener.subscription.unsubscribe() }
-  }, [refreshProfile])
-
-  useEffect(() => { if (user) void refreshProfile() }, [user, refreshProfile])
-
-  const signIn = async (email: string, password: string): Promise<AuthResult> => {
-    if (!supabase) return { error: 'Supabase is not configured yet. Add the required environment variables to continue.' }
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) return { error: error.message }
-    setSession(data.session); setUser(data.user)
-    const { data: profileData } = await supabase.from('profiles').select('id, email, role, full_name, prescribe_id, created_at').eq('id', data.user.id).maybeSingle()
-    const signedInProfile = profileFromRecord(profileData)
-    setProfile(signedInProfile)
-    const signedInRole = signedInProfile?.role ?? userMetadataRole(data.user)
-    if (!signedInRole) return { error: 'Your account does not have a portal role assigned. Contact your administrator.' }
-    return { role: signedInRole }
-  }
-
-  const signUp = async ({ fullName, email, password, role }: SignUpInput): Promise<AuthResult> => {
-    if (!supabase) return { error: 'Supabase is not configured yet. Add the required environment variables to continue.' }
-    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, role } } })
-    if (error || !data.user) return { error: error?.message ?? 'Unable to create your account.' }
-    const { error: profileError } = await supabase.from('profiles').upsert({ id: data.user.id, email, role, full_name: fullName }, { onConflict: 'id' })
-    if (profileError) return { error: 'Your account was created, but the profile could not be prepared. Check the profiles table and its RLS policies.' }
-    return { requiresEmailConfirmation: !data.session }
-  }
-
-  const signOut = async (): Promise<AuthResult> => {
-    if (!supabase) return {}
-    const { error } = await supabase.auth.signOut()
-    if (error) return { error: error.message }
-    setUser(null); setSession(null); setProfile(null)
-    return {}
-  }
-
-  const value = useMemo<AuthContextValue>(() => ({ user, session, profile, role: profile?.role ?? userMetadataRole(user), loading, isConfigured: isSupabaseConfigured, signIn, signUp, signOut, refreshProfile }), [user, session, profile, loading, refreshProfile])
+  const [user, setUser] = useState<User | null>(null); const [session, setSession] = useState<Session | null>(null); const [profile, setProfile] = useState<Profile | null>(null); const [loading, setLoading] = useState(true)
+  const provisionProfile = useCallback(async (authenticatedUser: User): Promise<Profile> => {
+    if (!supabase) throw new Error('Supabase is not configured yet.')
+    const { data: sessionData } = await supabase.auth.getSession()
+    if (!sessionData.session || sessionData.session.user.id !== authenticatedUser.id) throw new Error('Your account was created, but profile setup will continue after you sign in with an active session.')
+    const input = profileInput(authenticatedUser); if ('error' in input) throw new Error(input.error)
+    const { data, error } = await supabase.from('profiles').upsert(input.value, { onConflict: 'id' }).select('id, email, role, full_name, prescribe_id, created_at').single()
+    if (error) throw new Error(`Your account is ready, but we could not complete the profile: ${error.message}`)
+    const provisionedProfile = profileFromRecord(data); if (!provisionedProfile) throw new Error('Your account is ready, but the profile response was incomplete.')
+    return provisionedProfile
+  }, [])
+  const loadProfile = useCallback(async (authenticatedUser: User): Promise<Profile | null> => {
+    if (!supabase) return null
+    const { data, error } = await supabase.from('profiles').select('id, email, role, full_name, prescribe_id, created_at').eq('id', authenticatedUser.id).maybeSingle()
+    if (error) throw new Error(`Unable to load your profile: ${error.message}`)
+    return profileFromRecord(data) ?? provisionProfile(authenticatedUser)
+  }, [provisionProfile])
+  const syncSession = useCallback(async (nextSession: Session | null) => { setSession(nextSession); setUser(nextSession?.user ?? null); setProfile(null); if (!nextSession?.user) return; try { setProfile(await loadProfile(nextSession.user)) } catch { setProfile(null) } }, [loadProfile])
+  useEffect(() => { if (!supabase) { setLoading(false); return }; const client = supabase; void client.auth.getSession().then(async ({ data }) => { await syncSession(data.session); setLoading(false) }); const { data: listener } = client.auth.onAuthStateChange((_event, nextSession) => { void syncSession(nextSession).finally(() => setLoading(false)) }); return () => listener.subscription.unsubscribe() }, [syncSession])
+  const refreshProfile = useCallback(async () => { if (user) setProfile(await loadProfile(user)); else setProfile(null) }, [user, loadProfile])
+  const signIn = async (email: string, password: string): Promise<AuthResult> => { if (!supabase) return { error: 'Supabase is not configured yet. Add the required environment variables to continue.' }; const { data, error } = await supabase.auth.signInWithPassword({ email, password }); if (error || !data.user || !data.session) return { error: error?.message ?? 'Unable to sign in.' }; try { const loadedProfile = await loadProfile(data.user); setSession(data.session); setUser(data.user); setProfile(loadedProfile); const role = loadedProfile?.role ?? metadataRole(data.user); return role ? { role } : { error: 'Your account does not have a portal role assigned.' } } catch (profileError) { return { error: profileError instanceof Error ? profileError.message : 'Unable to prepare your profile.' } } }
+  const signUp = async ({ fullName, email, password, role }: SignUpInput): Promise<AuthResult> => { if (!supabase) return { error: 'Supabase is not configured yet. Add the required environment variables to continue.' }; const prescribeId = generatePreScribeId(role); const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, role, prescribe_id: prescribeId } } }); if (error || !data.user) return { error: error?.message ?? 'Unable to create your account.' }; if (!data.session) return { requiresEmailConfirmation: true }; try { const provisionedProfile = await provisionProfile(data.user); setSession(data.session); setUser(data.user); setProfile(provisionedProfile); return { role: provisionedProfile.role } } catch (profileError) { return { error: profileError instanceof Error ? profileError.message : 'Your account was created, but the profile could not be completed.' } } }
+  const signOut = async (): Promise<AuthResult> => { if (!supabase) return {}; const { error } = await supabase.auth.signOut(); if (error) return { error: error.message }; setUser(null); setSession(null); setProfile(null); return {} }
+  const value = useMemo<AuthContextValue>(() => ({ user, session, profile, role: profile?.role ?? (user ? metadataRole(user) : null), loading, isConfigured: isSupabaseConfigured, signIn, signUp, signOut, refreshProfile }), [user, session, profile, loading, refreshProfile])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
-
-export function useAuth() {
-  const context = useContext(AuthContext)
-  if (!context) throw new Error('useAuth must be used within AuthProvider')
-  return context
-}
+export function useAuth() { const context = useContext(AuthContext); if (!context) throw new Error('useAuth must be used within AuthProvider'); return context }
