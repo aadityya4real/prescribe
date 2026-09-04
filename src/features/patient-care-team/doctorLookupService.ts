@@ -1,0 +1,3 @@
+import { supabase } from '../../lib/supabase'
+import type { DoctorPreview } from './types'
+export async function findDoctorByPrescribeId(prescribeId: string): Promise<DoctorPreview | null> { if (!supabase) throw new Error('Supabase is not configured yet.'); const { data, error } = await supabase.rpc('find_doctor_by_prescribe_id', { doctor_prescribe_id: prescribeId.trim().toUpperCase() }); if (error) throw new Error(`Unable to find doctor: ${error.message}`); const doctor = Array.isArray(data) ? data[0] : null; return doctor && typeof doctor.id === 'string' && typeof doctor.full_name === 'string' && typeof doctor.prescribe_id === 'string' ? doctor as DoctorPreview : null }

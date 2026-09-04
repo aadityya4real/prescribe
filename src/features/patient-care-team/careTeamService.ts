@@ -1,0 +1,7 @@
+import { supabase } from '../../lib/supabase'
+import type { CreateConnectionInput, DoctorPatientConnection } from './types'
+const fields = 'id, patient_id, doctor_id, status, requested_by, request_message, requested_at, responded_at, created_at, updated_at'
+function client() { if (!supabase) throw new Error('Supabase is not configured yet.'); return supabase }
+export async function fetchPatientConnections(patientId: string): Promise<DoctorPatientConnection[]> { const { data, error } = await client().rpc('get_my_patient_connections'); if (error) throw new Error(`Unable to load care team: ${error.message}`); return ((data ?? []) as unknown as DoctorPatientConnection[]).filter((connection) => connection.patient_id === patientId) }
+export async function requestDoctorConnection(input: CreateConnectionInput): Promise<DoctorPatientConnection> { const { data, error } = await client().from('doctor_patient_connections').insert(input).select(fields).single(); if (error) throw new Error(error.code === '23505' ? 'You already have an active request with this doctor.' : `Unable to send request: ${error.message}`); return data as unknown as DoctorPatientConnection }
+export async function revokeDoctorConnection(id: string): Promise<DoctorPatientConnection> { const { data, error } = await client().from('doctor_patient_connections').update({ status: 'revoked' }).eq('id', id).select(fields).single(); if (error) throw new Error(`Unable to revoke connection: ${error.message}`); return data as unknown as DoctorPatientConnection }
