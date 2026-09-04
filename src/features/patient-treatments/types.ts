@@ -1,32 +1,9 @@
-export type TreatmentStatus = 'Active' | 'Paused' | 'Completed'
-
-export type Medication = {
-  id: string
-  name: string
-  dosage: string
-  frequency: string
-  timing: string
-  purpose: string
-  prescribingProvider?: string
-  startDate: string
-  status: TreatmentStatus
-  notes: string
-}
-
-export type Treatment = {
-  id: string
-  name: string
-  context: string
-  schedule: string
-  provider?: string
-  dateRange: string
-  status: TreatmentStatus
-  notes: string
-}
-
-export type CareScheduleItem = {
-  id: string
-  title: string
-  detail: string
-  timeLabel: string
-}
+export type TreatmentType = 'medication' | 'therapy' | 'procedure' | 'lifestyle' | 'rehabilitation' | 'other'
+export type TreatmentStatus = 'active' | 'completed' | 'paused' | 'discontinued'
+export type MedicationRoute = 'oral' | 'topical' | 'inhalation' | 'injection' | 'other'
+export type Treatment = { id: string; patient_id: string; health_record_id: string | null; title: string; description: string | null; treatment_type: TreatmentType; status: TreatmentStatus; start_date: string | null; end_date: string | null; provider_name: string | null; facility_name: string | null; created_at: string; updated_at: string }
+export type Medication = { id: string; patient_id: string; treatment_id: string | null; name: string; dosage: string | null; frequency: string | null; route: MedicationRoute | null; start_date: string | null; end_date: string | null; status: TreatmentStatus; instructions: string | null; created_at: string; updated_at: string }
+export type CreateTreatmentInput = Omit<Treatment, 'id' | 'created_at' | 'updated_at'>
+export type UpdateTreatmentInput = Partial<Omit<CreateTreatmentInput, 'patient_id'>>
+export type CreateMedicationInput = Omit<Medication, 'id' | 'created_at' | 'updated_at'>
+export type UpdateMedicationInput = Partial<Omit<CreateMedicationInput, 'patient_id'>>
