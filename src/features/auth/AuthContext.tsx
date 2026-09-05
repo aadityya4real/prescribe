@@ -1,5 +1,5 @@
 import type { Session, User } from '@supabase/supabase-js'
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Role } from '../../components/auth/RoleSelector'
 import { isSupabaseConfigured, supabase } from '../../lib/supabase'
 
@@ -17,6 +17,9 @@ function profileInput(user: User) { const role = metadataRole(user); const fullN
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null); const [session, setSession] = useState<Session | null>(null); const [profile, setProfile] = useState<Profile | null>(null); const [profileError, setProfileError] = useState<string | null>(null); const [loading, setLoading] = useState(true)
+  const activeUserId = useRef<string | null>(null)
+  const profileRef = useRef<Profile | null>(null)
+  const profileLoadUserId = useRef<string | null>(null)
   const provisionProfile = useCallback(async (authenticatedUser: User): Promise<Profile> => {
     if (!supabase) throw new Error('Supabase is not configured yet.')
     const { data: sessionData } = await supabase.auth.getSession()
@@ -33,12 +36,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw new Error(`Unable to load your profile: ${error.message}`)
     return profileFromRecord(data) ?? provisionProfile(authenticatedUser)
   }, [provisionProfile])
-  const syncSession = useCallback(async (nextSession: Session | null) => { setSession(nextSession); setUser(nextSession?.user ?? null); setProfile(null); setProfileError(null); if (!nextSession?.user) return; try { setProfile(await loadProfile(nextSession.user)) } catch (error) { setProfileError(error instanceof Error ? error.message : 'Unable to load your profile.') } }, [loadProfile])
-  useEffect(() => { if (!supabase) { setLoading(false); return }; const client = supabase; void client.auth.getSession().then(async ({ data }) => { await syncSession(data.session); setLoading(false) }); const { data: listener } = client.auth.onAuthStateChange((_event, nextSession) => { void syncSession(nextSession).finally(() => setLoading(false)) }); return () => listener.subscription.unsubscribe() }, [syncSession])
-  const refreshProfile = useCallback(async () => { if (!user) { setProfile(null); setProfileError(null); return }; try { setProfile(await loadProfile(user)); setProfileError(null) } catch (error) { setProfile(null); setProfileError(error instanceof Error ? error.message : 'Unable to load your profile.') } }, [user, loadProfile])
+  const syncSession = useCallback(async (nextSession: Session | null) => {
+    const nextUser = nextSession?.user ?? null
+    const isSameUser = Boolean(nextUser && activeUserId.current === nextUser.id)
+    setSession(nextSession); setUser(nextUser)
+    if (!nextUser) { activeUserId.current = null; profileRef.current = null; profileLoadUserId.current = null; setProfile(null); setProfileError(null); setLoading(false); return }
+    if (isSameUser && (profileRef.current || profileLoadUserId.current === nextUser.id)) return
+    activeUserId.current = nextUser.id; profileRef.current = null; profileLoadUserId.current = nextUser.id; setProfile(null); setProfileError(null); setLoading(true)
+    try { const nextProfile = await loadProfile(nextUser); if (activeUserId.current === nextUser.id) { profileRef.current = nextProfile; setProfile(nextProfile); setProfileError(null) } } catch (error) { if (activeUserId.current === nextUser.id) setProfileError(error instanceof Error ? error.message : 'Unable to load your profile.') } finally { if (profileLoadUserId.current === nextUser.id) profileLoadUserId.current = null; if (activeUserId.current === nextUser.id) setLoading(false) }
+  }, [loadProfile])
+  useEffect(() => { if (!supabase) { setLoading(false); return }; const client = supabase; let active = true; void client.auth.getSession().then(({ data }) => { if (active) void syncSession(data.session) }).catch((error: unknown) => { if (active) { setProfileError(error instanceof Error ? error.message : 'Unable to restore your session.'); setLoading(false) } }); const { data: listener } = client.auth.onAuthStateChange((_event, nextSession) => { if (!active) return; if (_event === 'TOKEN_REFRESHED' && nextSession?.user.id === activeUserId.current) { setSession(nextSession); setUser(nextSession.user); return }; void syncSession(nextSession) }); return () => { active = false; listener.subscription.unsubscribe() } }, [syncSession])
+  const refreshProfile = useCallback(async () => { if (!user) { setProfile(null); setProfileError(null); return }; setLoading(true); try { const nextProfile = await loadProfile(user); if (activeUserId.current === user.id) { profileRef.current = nextProfile; setProfile(nextProfile); setProfileError(null) } } catch (error) { if (activeUserId.current === user.id) setProfileError(error instanceof Error ? error.message : 'Unable to load your profile.') } finally { if (activeUserId.current === user.id) setLoading(false) } }, [user, loadProfile])
   const signIn = async (email: string, password: string): Promise<AuthResult> => { if (!supabase) return { error: 'Supabase is not configured yet. Add the required environment variables to continue.' }; const { data, error } = await supabase.auth.signInWithPassword({ email, password }); if (error || !data.user || !data.session) return { error: error?.message ?? 'Unable to sign in.' }; try { const loadedProfile = await loadProfile(data.user); setSession(data.session); setUser(data.user); setProfile(loadedProfile); return loadedProfile ? { role: loadedProfile.role } : { error: 'Your account does not have a portal role assigned.' } } catch (profileError) { return { error: profileError instanceof Error ? profileError.message : 'Unable to prepare your profile.' } } }
   const signUp = async ({ fullName, email, password, role }: SignUpInput): Promise<AuthResult> => { if (!supabase) return { error: 'Supabase is not configured yet. Add the required environment variables to continue.' }; const prescribeId = generatePreScribeId(role); const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { full_name: fullName, role, prescribe_id: prescribeId } } }); if (error || !data.user) return { error: error?.message ?? 'Unable to create your account.' }; if (!data.session) return { requiresEmailConfirmation: true }; try { const provisionedProfile = await provisionProfile(data.user); setSession(data.session); setUser(data.user); setProfile(provisionedProfile); return { role: provisionedProfile.role } } catch (profileError) { return { error: profileError instanceof Error ? profileError.message : 'Your account was created, but the profile could not be completed.' } } }
-  const signOut = async (): Promise<AuthResult> => { if (!supabase) return {}; const { error } = await supabase.auth.signOut(); if (error) return { error: error.message }; setUser(null); setSession(null); setProfile(null); setProfileError(null); return {} }
+  const signOut = async (): Promise<AuthResult> => { if (!supabase) return {}; const { error } = await supabase.auth.signOut(); if (error) return { error: error.message }; activeUserId.current = null; profileRef.current = null; profileLoadUserId.current = null; setUser(null); setSession(null); setProfile(null); setProfileError(null); setLoading(false); return {} }
   const value = useMemo<AuthContextValue>(() => ({ user, session, profile, profileError, role: profile?.role ?? null, loading, isConfigured: isSupabaseConfigured, signIn, signUp, signOut, refreshProfile }), [user, session, profile, profileError, loading, refreshProfile])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

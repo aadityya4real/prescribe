@@ -6,6 +6,7 @@ import { PatientCareTeam } from './pages/PatientCareTeam'
 import { PatientAppointments } from './pages/PatientAppointments'
 import { PatientTreatments } from './pages/PatientTreatments'
 import { PatientTimeline } from './pages/PatientTimeline'
+import { PatientAiAssessment } from './pages/PatientAiAssessment'
 import { DoctorDashboard } from './pages/DoctorDashboard'
 import { DoctorPatientOverview } from './pages/DoctorPatientOverview'
 import { DoctorPatients } from './pages/DoctorPatients'
@@ -24,6 +25,7 @@ export function App() {
       <Route path="care-team" element={<PatientCareTeam />} />
       <Route path="appointments" element={<PatientAppointments />} />
       <Route path="treatments" element={<PatientTreatments />} />
+      <Route path="ai-assessment" element={<PatientAiAssessment />} />
     </Route>
 
     <Route path="/doctor" element={<PortalRoute role="doctor" />}>

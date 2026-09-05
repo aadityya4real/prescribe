@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarDays, ClipboardList, FileUp, MessageCircle, Search } from 'lucide-react'
+import { ArrowRight, Bot, CalendarDays, ClipboardList, MessageCircle, Search } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../features/auth/AuthContext'
 
@@ -6,7 +6,7 @@ const quickActions = [
   { label: 'View health timeline', detail: 'Review your record', to: '/patient/timeline', icon: ClipboardList },
   { label: 'Find a doctor', detail: 'Explore your care options', to: '/patient/care-team', icon: Search },
   { label: 'Book appointment', detail: 'Plan your next visit', to: '/patient/appointments', icon: CalendarDays },
-  { label: 'Upload health record', detail: 'Available soon', icon: FileUp },
+  { label: 'AI health assessment', detail: 'Organize what you are experiencing', to: '/patient/ai-assessment', icon: Bot },
 ]
 
 const emptySnapshot = [

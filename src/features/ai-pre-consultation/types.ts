@@ -1,0 +1,3 @@
+export type PreConsultationEvent = { date: string | null; title: string; summary: string }
+export type PreConsultationSummary = { appointmentContext: { date: string; type: string; reason: string | null }; consultationOverview: string; patientConcerns: string[]; relevantHealthHistory: PreConsultationEvent[]; activeTreatments: string[]; activeMedications: string[]; topicsToDiscuss: string[]; informationGaps: string[]; disclaimer: string; generatedAt: string }
+export type StoredPreConsultationSummary = { id: string; appointment_id: string; patient_concerns: string | null; summary: PreConsultationSummary; source_data_updated_at: string; created_at: string; updated_at: string }

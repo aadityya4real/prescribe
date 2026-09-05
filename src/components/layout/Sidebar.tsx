@@ -1,4 +1,4 @@
-import { CalendarDays, ClipboardList, LayoutDashboard, Pill, Stethoscope, UsersRound } from 'lucide-react'
+import { Bot, CalendarDays, ClipboardList, LayoutDashboard, Pill, Stethoscope, UsersRound } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import type { Role } from '../auth/RoleSelector'
 import { PreScribeMark } from '../ui/PreScribeMark'
@@ -9,6 +9,7 @@ const patientItems = [
   { label: 'Care team', to: '/patient/care-team', icon: UsersRound },
   { label: 'Appointments', to: '/patient/appointments', icon: CalendarDays },
   { label: 'Treatments', to: '/patient/treatments', icon: Pill },
+  { label: 'AI Assessment', to: '/patient/ai-assessment', icon: Bot },
 ]
 const doctorItems = [
   { label: 'Overview', to: '/doctor/dashboard', icon: LayoutDashboard },
