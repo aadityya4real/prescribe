@@ -16,12 +16,20 @@ const emptySnapshot = [
   { label: 'Care team members', detail: 'No doctors connected' },
 ]
 
+function getTimeBasedGreeting() {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
 export function PatientDashboard() {
   const { profile } = useAuth()
   const firstName = profile?.full_name.trim().split(/\s+/)[0] || 'there'
+  const greeting = getTimeBasedGreeting()
 
   return <div className="patient-dashboard">
-    <header className="dashboard-header"><div><p className="dashboard-date">Your health overview</p><h2>Good morning, {firstName}</h2><p>Your care information will appear here as it becomes available.</p></div></header>
+    <header className="dashboard-header"><div><p className="dashboard-date">Your health overview</p><h2>{greeting}, {firstName}</h2><p>Your care information will appear here as it becomes available.</p></div></header>
     <section className="dashboard-section" aria-labelledby="snapshot-heading"><div className="section-heading"><div><p className="section-kicker">At a glance</p><h3 id="snapshot-heading">Health snapshot</h3></div><span className="updated-status">No care data yet</span></div><div className="snapshot-grid">{emptySnapshot.map((item) => <article className="snapshot-item" key={item.label}><strong>0</strong><span>{item.label}</span><small>{item.detail}</small></article>)}</div></section>
     <div className="dashboard-columns">
       <section className="dashboard-section appointment-section" aria-labelledby="appointment-heading"><div className="section-heading"><div><p className="section-kicker">Next in your care</p><h3 id="appointment-heading">Upcoming appointment</h3></div></div><div className="dashboard-empty-state"><CalendarDays size={22} /><div><h4>No upcoming appointments</h4><p>When you schedule care, your next appointment will appear here.</p><Link className="text-action" to="/patient/appointments">Manage appointments <ArrowRight size={16} /></Link></div></div></section>
