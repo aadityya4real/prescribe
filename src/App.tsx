@@ -12,6 +12,7 @@ import { DoctorPatientOverview } from './pages/DoctorPatientOverview'
 import { DoctorPatients } from './pages/DoctorPatients'
 import { PortalPlaceholder } from './pages/PortalPlaceholder'
 import { SignupPage } from './pages/SignupPage'
+import { AccountPage } from './pages/AccountPage'
 
 export function App() {
   return <Routes>
@@ -26,6 +27,9 @@ export function App() {
       <Route path="appointments" element={<PatientAppointments />} />
       <Route path="treatments" element={<PatientTreatments />} />
       <Route path="ai-assessment" element={<PatientAiAssessment />} />
+      <Route path="profile" element={<AccountPage mode="profile" />} />
+      <Route path="settings" element={<AccountPage mode="settings" />} />
+      <Route path="privacy-security" element={<AccountPage mode="privacy" />} />
     </Route>
 
     <Route path="/doctor" element={<PortalRoute role="doctor" />}>
@@ -33,6 +37,9 @@ export function App() {
       <Route path="patients" element={<DoctorPatients />} />
       <Route path="patients/:connectionId" element={<DoctorPatientOverview />} />
       <Route path="schedule" element={<PortalPlaceholder title="Schedule" />} />
+      <Route path="profile" element={<AccountPage mode="profile" />} />
+      <Route path="settings" element={<AccountPage mode="settings" />} />
+      <Route path="privacy-security" element={<AccountPage mode="privacy" />} />
     </Route>
 
     <Route path="*" element={<Navigate to="/" replace />} />
